@@ -1,3 +1,4 @@
 fake_useragent
 loguru
 websockets_proxy
+aiohttp
