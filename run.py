@@ -9,11 +9,14 @@ from loguru import logger
 from websockets_proxy import Proxy, proxy_connect
 from fake_useragent import UserAgent
 
+# Initialize logger
 logger.add("output.log", rotation="10 MB")
 
+# Initialize user agent
 user_agent = UserAgent()
 random_user_agent = user_agent.random
 
+# Configuration
 MAX_RETRIES = 3
 RETRY_DELAY = 5
 PING_INTERVAL = 20
@@ -83,11 +86,23 @@ async def connect_to_wss(socks5_proxy, user_id):
                     handle_auth(websocket, device_id, user_id, custom_headers)
                 )
         except asyncio.CancelledError:
-            raise
-        except Exception as e:
+            logger.info("Task was cancelled")
+            break
+        except aiohttp.ClientError as e:
             logger.error(f"Failed to connect to {socks5_proxy}: {e}. Retrying...")
             await asyncio.sleep(RETRY_DELAY)
             retries += 1
+        except websockets.exceptions.ConnectionClosedError as e:
+            logger.error(f"Connection to {socks5_proxy} closed unexpectedly: {e}. Retrying...")
+            await asyncio.sleep(RETRY_DELAY)
+            retries += 1
+        except python_socks._errors.ProxyError as e:
+            logger.error(f"Proxy {socks5_proxy} is forbidden. Removing from proxy list.")
+            socks5_proxy_list.remove(socks5_proxy)
+            break
+        except Exception as e:
+            logger.exception(f"Unexpected error: {e}")
+            break
 
 def run_async(loop):
     asyncio.set_event_loop(loop)
@@ -106,7 +121,7 @@ async def main():
         tasks = []
         for user_id in _user_ids:
             for proxy in socks5_proxy_list:
-                tasks.append(connect_to_wss(proxy, user_id))
+                tasks.append(asyncio.create_task(connect_to_wss(proxy, user_id)))
 
         await asyncio.gather(*tasks, return_exceptions=True)
 
