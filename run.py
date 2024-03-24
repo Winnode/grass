@@ -66,7 +66,7 @@ async def connect_to_wss(socks5_proxy, user_id):
                     logger.debug(pong_response)
                     await websocket.send(json.dumps(pong_response))
     except Exception as e:
-        pass
+        logger.error(f"Error connecting to {socks5_proxy}: {e}")
 
 async def worker(user_ids, socks5_proxy_list):
     tasks = []
@@ -81,10 +81,12 @@ async def main():
         socks5_proxy_list = file.read().splitlines()
 
     # Number of workers
-    num_workers = 5
+    num_workers = 8
+    
+    # Adjust chunk size based on the length of user_ids
+    chunk_size = max(len(user_ids) // num_workers, 1)
     
     # Split user_ids into chunks for each worker
-    chunk_size = max(1, len(user_ids) // num_workers)
     user_id_chunks = [user_ids[i:i + chunk_size] for i in range(0, len(user_ids), chunk_size)]
     
     # Start workers
