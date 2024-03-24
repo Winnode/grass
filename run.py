@@ -88,25 +88,13 @@ async def connect_to_wss(socks5_proxy, user_id):
         except asyncio.CancelledError:
             logger.info("Task was cancelled")
             break
-        except aiohttp.ClientError as e:
+        except (aiohttp.ClientError, websockets.exceptions.ConnectionClosedError) as e:
             logger.error(f"Failed to connect to {socks5_proxy}: {e}. Retrying...")
             await asyncio.sleep(RETRY_DELAY)
             retries += 1
-        except websockets.exceptions.ConnectionClosedError as e:
-            logger.error(f"Connection to {socks5_proxy} closed unexpectedly: {e}. Retrying...")
-            await asyncio.sleep(RETRY_DELAY)
-            retries += 1
-        except python_socks._errors.ProxyError as e:
-            logger.error(f"Proxy {socks5_proxy} is forbidden. Removing from proxy list.")
-            socks5_proxy_list.remove(socks5_proxy)
-            break
         except Exception as e:
             logger.exception(f"Unexpected error: {e}")
             break
-
-def run_async(loop):
-    asyncio.set_event_loop(loop)
-    loop.run_forever()
 
 async def main():
     _user_ids = input('Please Enter your user IDs (comma-separated): ').split(',')
@@ -114,10 +102,6 @@ async def main():
         socks5_proxy_list = file.read().splitlines()
 
     while True:
-        loop = asyncio.new_event_loop()
-        asyncio_thread = threading.Thread(target=run_async, args=(loop,))
-        asyncio_thread.start()
-
         tasks = []
         for user_id in _user_ids:
             for proxy in socks5_proxy_list:
@@ -126,4 +110,7 @@ async def main():
         await asyncio.gather(*tasks, return_exceptions=True)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("KeyboardInterrupt received. Exiting...")
