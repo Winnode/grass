@@ -8,6 +8,9 @@ from loguru import logger
 from websockets_proxy import Proxy, proxy_connect
 from fake_useragent import UserAgent
 import websockets.exceptions
+from multiprocessing import Pool
+import aiohttp
+from aiodns import DNSResolver
 
 user_agent = UserAgent()
 random_user_agent = user_agent.random
@@ -27,7 +30,7 @@ async def connect_to_wss(socks5_proxy, user_id):
         proxy = Proxy.from_url(socks5_proxy)
 
         async with proxy_connect(uri, proxy=proxy, ssl=ssl_context, server_hostname=server_hostname,
-                                 extra_headers=custom_headers) as websocket:
+                                 extra_headers=custom_headers, timeout=30) as websocket:
             async def send_ping():
                 try:
                     while True:
@@ -65,6 +68,8 @@ async def connect_to_wss(socks5_proxy, user_id):
                     pong_response = {"id": message["id"], "origin_action": "PONG"}
                     logger.debug(pong_response)
                     await websocket.send(json.dumps(pong_response))
+    except asyncio.TimeoutError:
+        logger.error(f"Timeout connecting to {socks5_proxy}")
     except Exception as e:
         logger.error(f"Error connecting to {socks5_proxy}: {e}")
 
@@ -72,7 +77,7 @@ async def worker(user_ids, socks5_proxy_list):
     tasks = []
     for user_id in user_ids:
         for proxy in socks5_proxy_list:
-            tasks.append(asyncio.create_task(connect_to_wss(proxy, user_id)))
+            tasks.append(connect_to_wss(proxy, user_id))
     await asyncio.gather(*tasks)
 
 async def main():
@@ -81,7 +86,7 @@ async def main():
         socks5_proxy_list = file.read().splitlines()
 
     # Number of workers
-    num_workers = 8
+    num_workers = 5
     
     # Adjust chunk size based on the length of user_ids
     chunk_size = max(len(user_ids) // num_workers, 1)
@@ -89,9 +94,8 @@ async def main():
     # Split user_ids into chunks for each worker
     user_id_chunks = [user_ids[i:i + chunk_size] for i in range(0, len(user_ids), chunk_size)]
     
-    # Start workers
-    worker_tasks = [asyncio.create_task(worker(user_id_chunk, socks5_proxy_list)) for user_id_chunk in user_id_chunks]
-    await asyncio.gather(*worker_tasks)
+    # Start workers using asyncio.create_task
+    await asyncio.gather(*[asyncio.create_task(worker(user_id_chunk, socks5_proxy_list)) for user_id_chunk in user_id_chunks])
 
 if __name__ == '__main__':
     asyncio.run(main())
