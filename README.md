@@ -10,8 +10,9 @@
 ## HOW TO USE
 #### How to get your grass userid
 - Login to https://app.getgrass.io
-- Press f12 go to console, then type ```allow pasting``` insert to console
-![0001](https://github.com/im-hanzou/getgrass_bot/blob/main/pasting.JPG)
+- Press f12 
+![Uploading image.png…]()
+
 
 - Then insert this code to console
 ```localStorage.getItem('userId')```
