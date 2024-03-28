@@ -11,7 +11,7 @@
 #### How to get your grass userid
 - Login to https://app.getgrass.io
 - Press f12 
-https://github.com/Winnode/grass/blob/main/UserID.png
+ <img src="https://github.com/Winnode/grass/blob/main/UserID.png" width=500>
 
 #### Usage command
 - Open file ```proxy_list.txt``` and insert your proxies
