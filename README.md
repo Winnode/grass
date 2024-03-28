@@ -11,12 +11,8 @@
 #### How to get your grass userid
 - Login to https://app.getgrass.io
 - Press f12 
-![Uploading image.png…]()
+https://github.com/Winnode/grass/blob/main/UserID.png
 
-
-- Then insert this code to console
-```localStorage.getItem('userId')```
-![0001](https://github.com/im-hanzou/getgrass_bot/blob/main/userid.JPG)
 #### Usage command
 - Open file ```proxy_list.txt``` and insert your proxies
 - Run ```python run.py``` and insert your userid
